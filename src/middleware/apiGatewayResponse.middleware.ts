@@ -1,56 +1,46 @@
-import middy from "@middy/core";
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+import middy from '@middy/core';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 
-import { sendResponse } from "@libs/api-gateway";
-import { AppError } from "@libs/api-error";
+import { AppError } from '@libs/api-error';
 import MiddlewareFunction = middy.MiddlewareFn;
-import { logger } from "@infrastructures/utils/logger.util";
-
-export const apiGatewayResponseMiddleware = (
-  options: { enableErrorLogger?: boolean } = {}
-) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const after: MiddlewareFunction<APIGatewayProxyEvent, any> = async (
-    request
-  ) => {
-    if (
-      !request.event?.httpMethod ||
-      request.response === undefined ||
-      request.response === null
-    ) {
+import { logger } from '@aw/logger';
+import { sendResponse } from '@libs/api-gateway';
+/**
+ * Creates middleware for handling API Gateway responses and errors.
+ */
+export const apiGatewayResponseMiddleware = (options: { enableErrorLogger?: boolean } = {}) => {
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  const after: MiddlewareFunction<APIGatewayProxyEvent, any> = async (request) => {
+    if (!request.event?.httpMethod || request.response === undefined || request.response === null) {
       return;
     }
 
     const existingKeys = Object.keys(request.response);
     const isHttpResponse =
-      existingKeys.includes("statusCode") &&
-      existingKeys.includes("headers") &&
-      existingKeys.includes("body");
+      existingKeys.includes('statusCode') && existingKeys.includes('headers') && existingKeys.includes('body');
 
     if (isHttpResponse) {
       return;
     }
 
-    request.response = sendResponse(request.response);
+    request.response = sendResponse({ data: request.response?.data }, request.response?.statusCode);
   };
 
-  const onError: MiddlewareFunction<
-    APIGatewayProxyEvent,
-    APIGatewayProxyResult
-  > = async (request) => {
+  const onError: MiddlewareFunction<APIGatewayProxyEvent, APIGatewayProxyResult> = async (request) => {
     const { error } = request;
     let statusCode = 500;
 
     if (error instanceof AppError) {
-      // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
+      /* when throw error from application middleware catch and log it */
       statusCode = error.statusCode;
     }
 
     if (options.enableErrorLogger) {
-      logger.error(error?.message);
+      logger.error(`${JSON.stringify(error?.message)}`);
     }
 
-    request.response = sendResponse({ message: error.message });
+    request.response = sendResponse({ message: error?.message }, statusCode);
   };
 
   return {

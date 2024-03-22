@@ -3,8 +3,14 @@
     "baseUrl": ".",
     "paths": {
       "@functions/*": ["src/functions/*"],
+      "@infrastructures/*": ["src/infrastructures/*"],
       "@libs/*": ["src/libs/*"],
-      "@infrastructures/*": ["src/infrastructures/*"]
     }
-  }
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/*"
+    }
+  ]
 }
